@@ -5,16 +5,9 @@ import type React from "react"
 import { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogClose,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useSongStore } from "@/lib/stores/song-store"
-import { ArrowUp, ArrowDown, Save, UndoIcon, Music, X, Info, GripVertical } from "lucide-react"
+import { ArrowUp, ArrowDown, Save, UndoIcon, Music, Info, GripVertical } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import mermaid from "mermaid"
 import { ToastAction } from "@/components/ui/toast"
@@ -151,6 +144,7 @@ export function SongStructureBuilder({ id }: SongStructureBuilderProps) {
           htmlLabels: true,
           curve: "linear",
         },
+        logLevel: 1, // Set to 1 for error only, 2 for warning, 3 for info, 4 for debug
       })
     } catch (error) {
       console.error("Error initializing mermaid:", error)
@@ -180,8 +174,14 @@ export function SongStructureBuilder({ id }: SongStructureBuilderProps) {
 
     const renderDiagram = async () => {
       try {
+        // Make sure diagramRef.current is not null before proceeding
+        if (!diagramRef.current) {
+          console.error("Diagram ref is null, cannot render diagram")
+          return
+        }
+
         // Clear previous diagram
-        diagramRef.current!.innerHTML = ""
+        diagramRef.current.innerHTML = ""
 
         // Create diagram definition
         let diagram = "graph TD;\n"
@@ -222,23 +222,36 @@ export function SongStructureBuilder({ id }: SongStructureBuilderProps) {
         })
 
         // Render the diagram
-        const { svg } = await mermaid.render(`mermaid-diagram-${Date.now()}`, diagram)
-        diagramRef.current!.innerHTML = svg
+        try {
+          const { svg } = await mermaid.render(`mermaid-diagram-${Date.now()}`, diagram)
 
-        // Add global styles for clickable nodes
-        const styleElement = document.createElement("style")
-        styleElement.textContent = `
-          .song-diagram [id*="section"] { cursor: pointer !important; }
-          .song-diagram [id*="section"] * { cursor: pointer !important; }
-          .song-diagram .node { cursor: pointer !important; }
-          .song-diagram .node rect, .song-diagram .node circle, .song-diagram .node ellipse, 
-          .song-diagram .node polygon, .song-diagram .node path { cursor: pointer !important; }
-          .song-diagram .node text { cursor: pointer !important; }
-        `
-        diagramRef.current!.appendChild(styleElement)
+          // Double-check that diagramRef.current is still valid before setting innerHTML
+          if (diagramRef.current) {
+            diagramRef.current.innerHTML = svg
+
+            // Add global styles for clickable nodes
+            const styleElement = document.createElement("style")
+            styleElement.textContent = `
+              .song-diagram [id*="section"] { cursor: pointer !important; }
+              .song-diagram [id*="section"] * { cursor: pointer !important; }
+              .song-diagram .node { cursor: pointer !important; }
+              .song-diagram .node rect, .song-diagram .node circle, .song-diagram .node ellipse, 
+              .song-diagram .node polygon, .song-diagram .node path { cursor: pointer !important; }
+              .song-diagram .node text { cursor: pointer !important; }
+            `
+            diagramRef.current.appendChild(styleElement)
+          }
+        } catch (renderError) {
+          console.error("Error rendering mermaid diagram:", renderError)
+          if (diagramRef.current) {
+            diagramRef.current.innerHTML = `<div class="p-4 text-red-500">Error rendering diagram: ${renderError.message}</div>`
+          }
+        }
 
         // Add click handlers to the SVG elements after rendering
         setTimeout(() => {
+          if (!diagramRef.current) return
+
           currentArrangement.forEach((_, index) => {
             // Find the g element that contains the node
             const nodeElement =
@@ -273,8 +286,10 @@ export function SongStructureBuilder({ id }: SongStructureBuilderProps) {
           })
         }, 100) // Small delay to ensure the SVG is fully rendered
       } catch (error) {
-        console.error("Error rendering mermaid diagram:", error)
-        diagramRef.current!.innerHTML = `<div class="p-4 text-red-500">Error rendering diagram: ${error}</div>`
+        console.error("Error in diagram rendering process:", error)
+        if (diagramRef.current) {
+          diagramRef.current.innerHTML = `<div class="p-4 text-red-500">Error rendering diagram: ${error}</div>`
+        }
       }
     }
 
@@ -540,12 +555,12 @@ export function SongStructureBuilder({ id }: SongStructureBuilderProps) {
               </CardTitle>
               <div className="flex space-x-2">
                 <Button variant="outline" size="sm" onClick={restoreToSaved} disabled={!hasUnsavedChanges}>
-                  <UndoIcon className="mr-2 h-4 w-4" />
-                  Discard Changes
+                  <UndoIcon className="h-4 w-4" />
+                  <span className="hidden sm:inline-block sm:ml-2">Discard Changes</span>
                 </Button>
                 <Button size="sm" onClick={saveArrangement} disabled={!hasUnsavedChanges}>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Arrangement
+                  <Save className="h-4 w-4" />
+                  <span className="hidden sm:inline-block sm:ml-2">Save Arrangement</span>
                 </Button>
               </div>
             </div>
@@ -629,7 +644,7 @@ export function SongStructureBuilder({ id }: SongStructureBuilderProps) {
 
                 <div className="border rounded-md p-4">
                   <h3 className="text-lg font-medium mb-4">Song Structure Visualization</h3>
-                  <div className="flex items-center gap-2 p-3 text-sm rounded-md bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 mb-4">
+                  <div className="flex items-center gap-2 p-3 text-sm rounded-md bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 mb-4">
                     <Info className="h-5 w-5 flex-shrink-0" />
                     <p>Click on any section in the diagram to view its content.</p>
                   </div>
@@ -653,14 +668,7 @@ export function SongStructureBuilder({ id }: SongStructureBuilderProps) {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <span>{selectedSection?.type.toUpperCase()} Section</span>
-              <DialogClose asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
-                  <X className="h-4 w-4" />
-                </Button>
-              </DialogClose>
-            </DialogTitle>
+            <DialogTitle>{selectedSection?.type.toUpperCase()} Section</DialogTitle>
             <DialogDescription>View the content of this section</DialogDescription>
           </DialogHeader>
           <div className="mt-4">

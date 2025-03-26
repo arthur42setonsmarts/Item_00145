@@ -9,18 +9,17 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
-import { Edit, MoreHorizontal, Search, Trash } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Edit, MoreHorizontal, Search, Trash, Clock } from "lucide-react"
 import { useSongStore } from "@/lib/stores/song-store"
 import { formatDistanceToNow } from "@/lib/utils"
 import { useRouter } from "next/navigation"
-import { useToast } from "@/hooks/use-toast"
-import { ToastAction } from "@/components/ui/toast"
+import { toast } from "sonner"
 
 export function SongList() {
   const { songs, removeSong, addSong } = useSongStore()
   const [searchTerm, setSearchTerm] = useState("")
   const router = useRouter()
-  const { toast } = useToast()
 
   // Add a ref to store the deleted song for undo functionality
   const deletedSongRef = useRef<any>(null)
@@ -48,14 +47,12 @@ export function SongList() {
       removeSong(id)
 
       // Show toast with undo option
-      toast({
-        title: "Song Deleted",
+      toast.success("Song Deleted", {
         description: `"${songToDelete.title}" has been deleted.`,
-        action: (
-          <ToastAction altText="Undo" onClick={handleUndoDelete}>
-            Undo
-          </ToastAction>
-        ),
+        action: {
+          label: "Undo",
+          onClick: handleUndoDelete,
+        },
       })
     }
   }
@@ -66,8 +63,7 @@ export function SongList() {
       // Restore the deleted song
       addSong(deletedSongRef.current)
 
-      toast({
-        title: "Deletion Undone",
+      toast.success("Deletion Undone", {
         description: `"${deletedSongRef.current.title}" has been restored.`,
       })
 
@@ -98,46 +94,88 @@ export function SongList() {
             <p className="text-sm text-muted-foreground mt-1">
               {songs.length === 0 ? "Get started by creating your first song" : "Try adjusting your search term"}
             </p>
-            {/* Removed the redundant "Create a song" button */}
           </div>
         </div>
       ) : (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Categories</TableHead>
-                <TableHead>Last Updated</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredSongs.map((song) => (
-                <TableRow
-                  key={song.id}
-                  onClick={(e) => handleRowClick(song.id, e)}
-                  className="cursor-pointer hover:bg-accent/50 transition-colors"
-                >
-                  <TableCell className="font-medium">{song.title}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {song.categories && song.categories.length > 0 ? (
-                        song.categories.map((category, i) => (
-                          <Badge key={i} variant="outline">
-                            {category}
-                          </Badge>
-                        ))
-                      ) : (
-                        <span className="text-muted-foreground text-xs">No categories</span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>{formatDistanceToNow(new Date(song.updatedAt))}</TableCell>
-                  <TableCell className="text-right">
+        <>
+          {/* Desktop view - Table */}
+          <div className="rounded-md border hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Categories</TableHead>
+                  <TableHead>Last Updated</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredSongs.map((song) => (
+                  <TableRow
+                    key={song.id}
+                    onClick={(e) => handleRowClick(song.id, e)}
+                    className="cursor-pointer hover:bg-accent/50 transition-colors"
+                  >
+                    <TableCell className="font-medium">{song.title}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {song.categories && song.categories.length > 0 ? (
+                          song.categories.map((category, i) => (
+                            <Badge key={i} variant="outline">
+                              {category}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-muted-foreground text-xs">No categories</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>{formatDistanceToNow(new Date(song.updatedAt))}</TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="dropdown-action">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Open menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="dropdown-action">
+                          <Link href={`/editor/${song.id}`}>
+                            <DropdownMenuItem className="dropdown-action">
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                          </Link>
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive dropdown-action"
+                            onClick={() => handleDeleteSong(song.id)}
+                          >
+                            <Trash className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile view - Cards */}
+          <div className="md:hidden space-y-3">
+            {filteredSongs.map((song) => (
+              <Card
+                key={song.id}
+                className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+                onClick={(e) => handleRowClick(song.id, e)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-start">
+                    <h3 className="font-medium text-base truncate pr-2">{song.title}</h3>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="dropdown-action">
+                        <Button variant="ghost" size="icon" className="dropdown-action h-8 w-8">
                           <MoreHorizontal className="h-4 w-4" />
                           <span className="sr-only">Open menu</span>
                         </Button>
@@ -158,12 +196,30 @@ export function SongList() {
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+                  </div>
+
+                  <div className="mt-2">
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {song.categories && song.categories.length > 0 ? (
+                        song.categories.map((category, i) => (
+                          <Badge key={i} variant="outline" className="text-xs">
+                            {category}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-muted-foreground text-xs">No categories</span>
+                      )}
+                    </div>
+                    <div className="flex items-center text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3 mr-1" />
+                      {formatDistanceToNow(new Date(song.updatedAt))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </>
       )}
     </div>
   )

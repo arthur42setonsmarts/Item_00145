@@ -63,8 +63,8 @@ export function VersionHistory({ id }: VersionHistoryProps) {
                     <TableCell>{formatDistanceToNow(new Date(version.timestamp))}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="sm" onClick={() => handleViewVersion(version.id)}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        View
+                        <Eye className="h-4 w-4" />
+                        <span className="hidden sm:inline-block sm:ml-2">View</span>
                       </Button>
                     </TableCell>
                   </TableRow>

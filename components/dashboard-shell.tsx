@@ -20,8 +20,8 @@ export function DashboardShell({ children }: DashboardShellProps) {
         <div className="mx-auto max-w-5xl space-y-6">{children}</div>
       </main>
       <footer className="border-t py-4">
-        <div className="container flex flex-col items-center justify-between gap-4 md:flex-row">
-          <p className="text-center text-sm text-muted-foreground">
+        <div className="px-4 md:px-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <p className="text-sm text-muted-foreground">
             &copy; {new Date().getFullYear()} Lyrics Manager. All rights reserved.
           </p>
         </div>

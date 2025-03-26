@@ -137,7 +137,7 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">
 
-function toast({ ...props }: Toast) {
+function dispatchToast({ ...props }: Toast) {
   const id = genId()
 
   const update = (props: ToasterToast) =>
@@ -181,14 +181,16 @@ function useToastOriginal() {
 
   return {
     ...state,
-    toast,
+    toast: dispatchToast,
     dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
   }
 }
 
-// Importing from the correct location
-import { useToast as useToastAlias } from "@/components/ui/use-toast"
+// export const useToast = useToastAlias
+// export { useToastOriginal as useToastInternal, toast }
 
-export const useToast = useToastAlias
-export { useToastOriginal as useToastInternal, toast }
+import { toast } from "sonner"
+
+export { toast }
+export const useToast = () => ({ toast })
 

@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { toast } from "sonner"
 
 interface Section {
   start: number
@@ -36,7 +37,6 @@ export function SectionTagger({ lyrics, sections, onSectionsChange, selectionRan
   const currentSong = songs.find((song) => song.id === songId)
   const featuredArtists = currentSong?.featuredArtists || []
   const [currentUser, setCurrentUser] = useState<string>("Chester")
-  const [/*debugInfo*/ /*setDebugInfo*/ ,] = useState<string>("")
 
   // Load current user from localStorage
   useEffect(() => {
@@ -86,15 +86,10 @@ export function SectionTagger({ lyrics, sections, onSectionsChange, selectionRan
       setHasOverlap(hasOverlap)
       setOverlapMessage(message)
       setCanAddSection(!hasOverlap)
-
-      //setDebugInfo(
-      //  `Selection: ${selectionRange.start}-${selectionRange.end} (${selectionRange.end - selectionRange.start} chars)`,
-      //)
     } else {
       setCanAddSection(false)
       setHasOverlap(false)
       setOverlapMessage("")
-      //setDebugInfo("No selection")
     }
   }, [selectionRange, sections])
 
@@ -141,7 +136,10 @@ export function SectionTagger({ lyrics, sections, onSectionsChange, selectionRan
     setHasOverlap(false)
     setOverlapMessage("")
     setCanAddSection(false)
-    //setDebugInfo("No selection")
+
+    toast.success("Section Added", {
+      description: `Added a new ${selectedType} section to your lyrics.`,
+    })
   }
 
   const removeSection = (index: number) => {
@@ -155,6 +153,10 @@ export function SectionTagger({ lyrics, sections, onSectionsChange, selectionRan
         ),
     )
     onSectionsChange(newSections)
+
+    toast.success("Section Removed", {
+      description: `Removed the ${sectionToRemove.type} section from your lyrics.`,
+    })
   }
 
   const toggleArtistForSection = (sectionIndex: number, artist: string) => {
@@ -242,15 +244,6 @@ export function SectionTagger({ lyrics, sections, onSectionsChange, selectionRan
               <AlertDescription className="text-amber-700 dark:text-amber-300">{overlapMessage}</AlertDescription>
             </Alert>
           )}
-
-          {/* Debug info - visible in deployed environment */}
-          {/*<div className="mt-2 text-xs text-muted-foreground">*/}
-          {/*  {debugInfo}*/}
-          {/*  <br />*/}
-          {/*  Button state: {canAddSection ? "Enabled" : "Disabled"}*/}
-          {/*  <br />*/}
-          {/*  Has overlap: {hasOverlap ? "Yes" : "No"}*/}
-          {/*</div>*/}
 
           <div>
             <h3 className="text-sm font-medium mb-2">Tagged Sections</h3>

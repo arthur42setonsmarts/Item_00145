@@ -172,17 +172,8 @@ export function SimpleEditor({
       const colorKey = section.type as keyof typeof colors
       const bgColor = colors[colorKey] || (isDarkMode ? "#2d2d2d" : "#f0f0f0")
 
-      // Add performer names to the highlight if present
-      let performerDisplay = ""
-      if (section.artists && section.artists.length > 0) {
-        performerDisplay = `<div class="absolute top-0 right-0 flex flex-wrap gap-1 p-1 max-w-full">
-          ${section.artists
-            .map((artist) => `<span class="text-xs bg-black/20 dark:bg-white/20 px-1 py-0.5 rounded">${artist}</span>`)
-            .join("")}
-        </div>`
-      }
-
-      html += `<span style="background-color: ${bgColor}; position: relative;">${escapeHtml(sectionText)}${performerDisplay}</span>`
+      // We'll no longer add performer names directly in the highlighted HTML
+      html += `<span style="background-color: ${bgColor};">${escapeHtml(sectionText)}</span>`
 
       lastIndex = section.end
     })

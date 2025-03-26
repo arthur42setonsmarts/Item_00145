@@ -1,6 +1,9 @@
 "use client"
 
 import { useState, useRef } from "react"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+import * as z from "zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,76 +16,127 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Edit, MoreHorizontal, Plus, Trash } from "lucide-react"
 import { useCategoryStore } from "@/lib/stores/category-store"
 import { useSongStore } from "@/lib/stores/song-store"
-import { useToast } from "@/hooks/use-toast"
-import { ToastAction } from "@/components/ui/toast"
+import { toast } from "sonner"
+
+// Form schema for adding a new category
+const addCategorySchema = z.object({
+  name: z
+    .string()
+    .min(1, { message: "Category name is required" })
+    .refine((name) => name.trim().length > 0, {
+      message: "Category name cannot be empty",
+    }),
+})
+
+// Form schema for editing a category
+const editCategorySchema = z.object({
+  name: z
+    .string()
+    .min(1, { message: "Category name is required" })
+    .refine((name) => name.trim().length > 0, {
+      message: "Category name cannot be empty",
+    }),
+})
 
 export function CategoryList() {
   const { categories, addCategory, updateCategory, removeCategory } = useCategoryStore()
   const { songs } = useSongStore()
-  const { toast } = useToast()
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [newCategoryName, setNewCategoryName] = useState("")
   const [editCategoryId, setEditCategoryId] = useState<string | null>(null)
-  const [editCategoryName, setEditCategoryName] = useState("")
 
   // Use refs to store previous state for undo operations
   const previousCategoryRef = useRef<{ id: string; name: string; createdAt: string } | null>(null)
   const undoActionRef = useRef<"edit" | "delete" | null>(null)
 
-  const handleAddCategory = () => {
-    if (newCategoryName.trim()) {
-      const newCategory = {
-        id: Date.now().toString(),
-        name: newCategoryName.trim(),
-        createdAt: new Date().toISOString(),
-      }
+  // Initialize forms
+  const addForm = useForm<z.infer<typeof addCategorySchema>>({
+    resolver: zodResolver(addCategorySchema),
+    defaultValues: {
+      name: "",
+    },
+  })
 
-      addCategory(newCategory)
-      setNewCategoryName("")
-      setIsAddDialogOpen(false)
+  const editForm = useForm<z.infer<typeof editCategorySchema>>({
+    resolver: zodResolver(editCategorySchema),
+    defaultValues: {
+      name: "",
+    },
+  })
 
-      toast({
-        title: "Category Added",
-        description: `"${newCategoryName.trim()}" has been added to your categories.`,
+  const handleAddCategory = (values: z.infer<typeof addCategorySchema>) => {
+    // Check if category with same name already exists
+    const categoryExists = categories.some((cat) => cat.name.toLowerCase() === values.name.trim().toLowerCase())
+
+    if (categoryExists) {
+      addForm.setError("name", {
+        type: "manual",
+        message: "A category with this name already exists",
       })
+      return
     }
+
+    const newCategory = {
+      id: Date.now().toString(),
+      name: values.name.trim(),
+      createdAt: new Date().toISOString(),
+    }
+
+    addCategory(newCategory)
+    addForm.reset()
+    setIsAddDialogOpen(false)
+
+    toast.success("Category Added", {
+      description: `"${values.name.trim()}" has been added to your categories.`,
+    })
   }
 
-  const handleEditCategory = () => {
-    if (editCategoryId && editCategoryName.trim()) {
-      // Store the previous state for undo functionality
-      const categoryToEdit = categories.find((cat) => cat.id === editCategoryId)
-      if (categoryToEdit) {
-        previousCategoryRef.current = { ...categoryToEdit }
-        undoActionRef.current = "edit"
-      }
+  const handleEditCategory = (values: z.infer<typeof editCategorySchema>) => {
+    if (!editCategoryId) return
 
-      // Update the category
-      updateCategory(editCategoryId, {
-        name: editCategoryName.trim(),
+    // Check if another category with same name already exists
+    const categoryExists = categories.some(
+      (cat) => cat.id !== editCategoryId && cat.name.toLowerCase() === values.name.trim().toLowerCase(),
+    )
+
+    if (categoryExists) {
+      editForm.setError("name", {
+        type: "manual",
+        message: "A category with this name already exists",
       })
-
-      // Show toast with undo option
-      toast({
-        title: "Category Updated",
-        description: `Category has been renamed to "${editCategoryName.trim()}".`,
-        action: (
-          <ToastAction altText="Undo" onClick={handleUndo}>
-            Undo
-          </ToastAction>
-        ),
-      })
-
-      setEditCategoryId(null)
-      setEditCategoryName("")
-      setIsEditDialogOpen(false)
+      return
     }
+
+    // Store the previous state for undo functionality
+    const categoryToEdit = categories.find((cat) => cat.id === editCategoryId)
+    if (categoryToEdit) {
+      previousCategoryRef.current = { ...categoryToEdit }
+      undoActionRef.current = "edit"
+    }
+
+    // Update the category
+    updateCategory(editCategoryId, {
+      name: values.name.trim(),
+    })
+
+    // Show toast with undo option
+    toast.success("Category Updated", {
+      description: `Category has been renamed to "${values.name.trim()}".`,
+      action: {
+        label: "Undo",
+        onClick: handleUndo,
+      },
+    })
+
+    setEditCategoryId(null)
+    editForm.reset()
+    setIsEditDialogOpen(false)
   }
 
   const handleDeleteCategory = (id: string) => {
@@ -96,14 +150,12 @@ export function CategoryList() {
       removeCategory(id)
 
       // Show toast with undo option
-      toast({
-        title: "Category Deleted",
+      toast.success("Category Deleted", {
         description: `"${categoryToDelete.name}" has been deleted.`,
-        action: (
-          <ToastAction altText="Undo" onClick={handleUndo}>
-            Undo
-          </ToastAction>
-        ),
+        action: {
+          label: "Undo",
+          onClick: handleUndo,
+        },
       })
     }
   }
@@ -117,8 +169,7 @@ export function CategoryList() {
     if (action === "delete") {
       // Restore the deleted category
       addCategory(prevCategory)
-      toast({
-        title: "Deletion Undone",
+      toast.success("Deletion Undone", {
         description: `"${prevCategory.name}" has been restored.`,
       })
     } else if (action === "edit") {
@@ -126,8 +177,7 @@ export function CategoryList() {
       updateCategory(prevCategory.id, {
         name: prevCategory.name,
       })
-      toast({
-        title: "Change Undone",
+      toast.success("Change Undone", {
         description: `Category name has been restored to "${prevCategory.name}".`,
       })
     }
@@ -139,7 +189,7 @@ export function CategoryList() {
 
   const openEditDialog = (id: string, name: string) => {
     setEditCategoryId(id)
-    setEditCategoryName(name)
+    editForm.reset({ name })
     setIsEditDialogOpen(true)
   }
 
@@ -149,7 +199,13 @@ export function CategoryList() {
 
   return (
     <div className="space-y-4">
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+      <Dialog
+        open={isAddDialogOpen}
+        onOpenChange={(open) => {
+          setIsAddDialogOpen(open)
+          if (!open) addForm.reset()
+        }}
+      >
         <DialogTrigger asChild>
           <Button className="ml-auto">
             <Plus className="mr-2 h-4 w-4" />
@@ -161,53 +217,70 @@ export function CategoryList() {
             <DialogTitle>Add Category</DialogTitle>
             <DialogDescription>Create a new category to organize your songs</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <label htmlFor="name" className="text-sm font-medium">
-                Category Name
-              </label>
-              <Input
-                id="name"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                placeholder="Enter category name"
+          <Form {...addForm}>
+            <form onSubmit={addForm.handleSubmit(handleAddCategory)} className="space-y-4">
+              <FormField
+                control={addForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">Category Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter category name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddCategory}>Add Category</Button>
-          </DialogFooter>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} type="button">
+                  Cancel
+                </Button>
+                <Button type="submit">Add Category</Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      <Dialog
+        open={isEditDialogOpen}
+        onOpenChange={(open) => {
+          setIsEditDialogOpen(open)
+          if (!open) {
+            editForm.reset()
+            setEditCategoryId(null)
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Category</DialogTitle>
             <DialogDescription>Update the category name</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <label htmlFor="edit-name" className="text-sm font-medium">
-                Category Name
-              </label>
-              <Input
-                id="edit-name"
-                value={editCategoryName}
-                onChange={(e) => setEditCategoryName(e.target.value)}
-                placeholder="Enter category name"
+          <Form {...editForm}>
+            <form onSubmit={editForm.handleSubmit(handleEditCategory)} className="space-y-4">
+              <FormField
+                control={editForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="after:content-['*'] after:ml-0.5 after:text-red-500">Category Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter category name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleEditCategory}>Save Changes</Button>
-          </DialogFooter>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} type="button">
+                  Cancel
+                </Button>
+                <Button type="submit">Save Changes</Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 
