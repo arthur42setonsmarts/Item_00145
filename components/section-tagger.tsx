@@ -36,17 +36,7 @@ export function SectionTagger({ lyrics, sections, onSectionsChange, selectionRan
   const { songs } = useSongStore()
   const currentSong = songs.find((song) => song.id === songId)
   const featuredArtists = currentSong?.featuredArtists || []
-  const [currentUser, setCurrentUser] = useState<string>("Chester")
-
-  // Load current user from localStorage
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedName = localStorage.getItem("lyrics-manager-profile-name")
-      if (savedName) {
-        setCurrentUser(savedName)
-      }
-    }
-  }, [])
+  const [currentUser, setCurrentUser] = useState<string>("Me")
 
   // Get all available performers (current user + featured artists)
   const allPerformers = useMemo(() => {
@@ -298,7 +288,7 @@ export function SectionTagger({ lyrics, sections, onSectionsChange, selectionRan
                                         onCheckedChange={() => toggleArtistForSection(index, artist)}
                                       />
                                       <Label htmlFor={`artist-${index}-${artist}`} className="text-sm cursor-pointer">
-                                        {artist} {isCurrentUser && <span className="text-muted-foreground">(Me)</span>}
+                                        {isCurrentUser ? "Me" : artist}
                                       </Label>
                                     </div>
                                   )

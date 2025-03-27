@@ -1,11 +1,24 @@
+"use client"
+
+import { useEffect } from "react"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { SongList } from "@/components/song-list"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-// Make sure we're using the correct icon here too
 import { PlusCircle } from "lucide-react"
+import { useSongStore } from "@/lib/stores/song-store"
+import { useCategoryStore } from "@/lib/stores/category-store"
 
 export default function Home() {
+  const { initializeSampleData } = useSongStore()
+  const { initializeSampleCategories } = useCategoryStore()
+
+  // Initialize sample data when the app loads
+  useEffect(() => {
+    initializeSampleCategories()
+    initializeSampleData()
+  }, [initializeSampleCategories, initializeSampleData])
+
   return (
     <DashboardShell>
       <div className="flex items-center justify-between">

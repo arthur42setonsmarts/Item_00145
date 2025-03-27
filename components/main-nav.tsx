@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Home, BookOpen, Tag, User } from "lucide-react"
+import { Home, BookOpen, Tag } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 
 export function MainNav() {
@@ -43,15 +43,6 @@ export function MainNav() {
             >
               <Tag className="h-4 w-4 md:mr-2" />
               <span className="hidden md:inline-flex">Categories</span>
-            </Button>
-          </Link>
-          <Link href="/profile">
-            <Button
-              variant={pathname.startsWith("/profile") ? "default" : "ghost"}
-              className="h-9 w-9 p-0 md:h-10 md:w-fit md:px-4 md:py-2"
-            >
-              <User className="h-4 w-4 md:mr-2" />
-              <span className="hidden md:inline-flex">Profile</span>
             </Button>
           </Link>
           <ThemeToggle />

@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
-import { BookOpen, Home, Menu, Tag, User } from "lucide-react"
+import { BookOpen, Home, Menu, Tag } from "lucide-react"
 import { useState } from "react"
 import { ThemeToggle } from "@/components/theme-toggle"
 
@@ -16,7 +16,6 @@ export function MobileNav() {
     { href: "/", label: "My Music", icon: Home },
     { href: "/editor/new", label: "Editor", icon: BookOpen },
     { href: "/categories", label: "Categories", icon: Tag },
-    { href: "/profile", label: "Profile", icon: User },
   ]
 
   return (

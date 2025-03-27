@@ -14,11 +14,12 @@ interface CategoryStore {
   addCategory: (category: Category) => void
   updateCategory: (id: string, updates: Partial<Category>) => void
   removeCategory: (id: string) => void
+  initializeSampleCategories: () => void
 }
 
 export const useCategoryStore = create<CategoryStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       // Initialize with empty array instead of mock data
       categories: [],
 
@@ -47,6 +48,60 @@ export const useCategoryStore = create<CategoryStore>()(
             categories: state.categories.filter((category) => category.id !== id),
           }
         })
+      },
+
+      // Add a function to initialize sample categories
+      initializeSampleCategories: () => {
+        const { categories } = get()
+
+        // Only add sample categories if there are none yet
+        if (categories.length > 0) {
+          console.log("Sample categories not initialized - categories already exist")
+          return
+        }
+
+        const now = new Date().toISOString()
+
+        // Create sample categories
+        const sampleCategories: Category[] = [
+          {
+            id: "cat-rock",
+            name: "Rock",
+            createdAt: now,
+          },
+          {
+            id: "cat-alternative",
+            name: "Alternative",
+            createdAt: now,
+          },
+          {
+            id: "cat-pop",
+            name: "Pop",
+            createdAt: now,
+          },
+          {
+            id: "cat-electronic",
+            name: "Electronic",
+            createdAt: now,
+          },
+          {
+            id: "cat-hiphop",
+            name: "Hip-Hop",
+            createdAt: now,
+          },
+          {
+            id: "cat-rnb",
+            name: "R&B",
+            createdAt: now,
+          },
+        ]
+
+        // Add the sample categories
+        set((state) => ({
+          categories: [...state.categories, ...sampleCategories],
+        }))
+
+        console.log("Sample categories initialized with 6 categories")
       },
     }),
     {
